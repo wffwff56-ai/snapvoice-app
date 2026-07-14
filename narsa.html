@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snapvoice — Free Invoice Generator for Freelancers</title>
+<meta name="description" content="Create professional invoices in minutes. Add your items, taxes, and branding — download as PDF. No signup required.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EEF1F3;
+    --panel: #FFFFFF;
+    --ink: #171C26;
+    --ink-soft: #6B7280;
+    --line: #E1E5EA;
+    --indigo: #2E3A6B;
+    --indigo-deep: #1F2952;
+    --emerald: #1F7A5C;
+    --emerald-soft: #E1F0EA;
+    --radius: 10px;
+    --shadow: 0 1px 2px rgba(23,28,38,0.05), 0 10px 28px rgba(23,28,38,0.06);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .display{ font-family:'Space Grotesk', sans-serif; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+
+  #shell{ display:grid; grid-template-columns:460px 1fr; min-height:100vh; }
+  @media(max-width:960px){ #shell{ grid-template-columns:1fr; } }
+
+  #formPane{
+    background:var(--panel);
+    border-right:1px solid var(--line);
+    padding:28px 28px 90px;
+    overflow-y:auto;
+    max-height:100vh;
+  }
+  @media(max-width:960px){ #formPane{ max-height:none; } }
+
+  .brand{ display:flex; align-items:center; gap:10px; margin-bottom:4px; }
+  .brand-mark{
+    width:32px; height:32px; border-radius:8px;
+    background:var(--indigo);
+    display:flex; align-items:center; justify-content:center;
+    color:white; font-weight:700; font-size:14px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .brand-name{ font-family:'Space Grotesk', sans-serif; font-size:18px; font-weight:700; }
+  .brand-tag{ font-size:12.5px; color:var(--ink-soft); margin:3px 0 24px; }
+
+  .section-block{ border-top:1px solid var(--line); padding-top:18px; margin-top:18px; }
+  .section-block:first-of-type{ border-top:none; margin-top:0; padding-top:0; }
+  .section-head h3{
+    margin:0 0 12px; font-size:11.5px; font-weight:700; text-transform:uppercase;
+    letter-spacing:0.07em; color:var(--indigo-deep);
+  }
+
+  label{ font-size:12px; font-weight:600; color:var(--ink-soft); display:block; margin-bottom:5px; }
+  .field{ margin-bottom:12px; }
+  input, textarea, select{
+    width:100%; font-family:'Inter', sans-serif; font-size:14px;
+    padding:9px 11px; border-radius:8px; border:1px solid var(--line);
+    background:var(--paper); color:var(--ink);
+  }
+  input:focus, textarea:focus, select:focus{
+    outline:2px solid var(--indigo); outline-offset:1px; border-color:var(--indigo);
+  }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .row3{ display:grid; grid-template-columns:1fr 70px 90px 26px; gap:8px; align-items:end; }
+
+  .item-row{ margin-bottom:8px; }
+  .item-row label{ font-size:10.5px; margin-bottom:3px; }
+  .item-remove{
+    background:none; border:none; cursor:pointer; color:var(--ink-soft);
+    font-size:14px; padding:8px 2px;
+  }
+  .item-remove:hover{ color:#B3413A; }
+
+  button.btn{
+    font-family:'Inter', sans-serif; font-weight:600; font-size:13.5px;
+    padding:9px 14px; border-radius:8px; border:none; cursor:pointer;
+    background:var(--indigo); color:white;
+  }
+  button.btn:hover{ background:var(--indigo-deep); }
+  button.btn.ghost{ background:transparent; color:var(--indigo-deep); border:1px solid var(--line); }
+  button.btn.ghost:hover{ background:#EEF0F7; }
+  button.btn.add{
+    width:100%; background:transparent; color:var(--indigo);
+    border:1.5px dashed var(--line); font-size:13px; margin-top:4px;
+  }
+  button.btn.add:hover{ border-color:var(--indigo); background:#EEF0F7; }
+  button.btn.full{ width:100%; }
+
+  .currency-row{ display:flex; gap:8px; }
+  .logo-upload{
+    display:flex; align-items:center; gap:10px; margin-bottom:12px;
+  }
+  .logo-preview{
+    width:44px; height:44px; border-radius:8px; border:1.5px dashed var(--line);
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+    color:var(--ink-soft); font-size:10px; text-align:center; flex-shrink:0;
+  }
+  .logo-preview img{ width:100%; height:100%; object-fit:contain; }
+
+  /* ---- Preview ---- */
+  #previewPane{
+    background:#DFE4E8; padding:36px;
+    display:flex; flex-direction:column; align-items:center;
+    overflow-y:auto;
+  }
+  .preview-toolbar{
+    width:100%; max-width:760px; display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;
+  }
+  .preview-toolbar .hint{ font-size:12.5px; color:var(--ink-soft); }
+
+  #invoice{
+    width:100%; max-width:760px; min-height:1000px;
+    background:white; box-shadow:var(--shadow);
+    padding:52px 56px;
+    position:relative;
+  }
+  .inv-top{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:36px; }
+  .inv-brand{ display:flex; align-items:center; gap:12px; }
+  .inv-logo{ width:52px; height:52px; border-radius:8px; object-fit:contain; }
+  .inv-from-name{ font-family:'Space Grotesk', sans-serif; font-size:19px; font-weight:700; }
+  .inv-from-detail{ font-size:12px; color:var(--ink-soft); line-height:1.5; white-space:pre-line; }
+  .inv-meta{ text-align:right; }
+  .inv-label{ font-family:'Space Grotesk', sans-serif; font-size:26px; font-weight:700; color:var(--indigo); letter-spacing:0.02em; }
+  .inv-number{ font-family:'IBM Plex Mono', monospace; font-size:12.5px; color:var(--ink-soft); margin-top:4px; }
+  .inv-dates{ font-size:12px; color:var(--ink-soft); margin-top:10px; line-height:1.7; }
+  .inv-dates b{ color:var(--ink); font-weight:600; }
+
+  .inv-parties{ display:flex; justify-content:space-between; gap:24px; margin-bottom:30px; padding-bottom:24px; border-bottom:1px solid var(--line); }
+  .inv-party-label{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:var(--ink-soft); margin-bottom:6px; }
+  .inv-party-name{ font-weight:700; font-size:14.5px; margin-bottom:2px; }
+  .inv-party-detail{ font-size:12.5px; color:var(--ink-soft); line-height:1.5; white-space:pre-line; }
+
+  table.inv-items{ width:100%; border-collapse:collapse; margin-bottom:20px; }
+  table.inv-items thead th{
+    text-align:left; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em;
+    color:var(--ink-soft); padding-bottom:8px; border-bottom:1.5px solid var(--indigo-deep);
+  }
+  table.inv-items th.num, table.inv-items td.num{ text-align:right; }
+  table.inv-items td{ padding:10px 0; border-bottom:1px solid var(--line); font-size:13.5px; vertical-align:top; }
+  table.inv-items td.desc{ font-weight:600; }
+  table.inv-items td.mono{ font-family:'IBM Plex Mono', monospace; font-size:13px; }
+
+  .inv-totals{ display:flex; justify-content:flex-end; margin-top:6px; }
+  .inv-totals-box{ width:260px; }
+  .inv-totals-row{ display:flex; justify-content:space-between; font-size:13px; padding:6px 0; color:var(--ink-soft); }
+  .inv-totals-row.grand{
+    font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:18px; color:var(--indigo);
+    border-top:1.5px solid var(--indigo-deep); margin-top:6px; padding-top:12px;
+  }
+
+  .inv-notes{ margin-top:36px; padding-top:20px; border-top:1px solid var(--line); }
+  .inv-notes-label{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); margin-bottom:6px; }
+  .inv-notes-text{ font-size:12.5px; color:var(--ink); line-height:1.6; white-space:pre-line; }
+
+  .inv-stamp{
+    position:absolute; top:52px; right:56px;
+    border:2.5px solid var(--emerald); color:var(--emerald);
+    font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:13px;
+    letter-spacing:0.12em; text-transform:uppercase;
+    padding:6px 14px; border-radius:6px; transform:rotate(8deg);
+    opacity:0.9;
+  }
+
+  @media print{
+    body *{ visibility:hidden; }
+    #invoice, #invoice *{ visibility:visible; }
+    #invoice{ position:absolute; top:0; left:0; width:100%; box-shadow:none; margin:0; }
+  }
+
+  ::-webkit-scrollbar{ width:10px; }
+  ::-webkit-scrollbar-thumb{ background:#C7CDD3; border-radius:100px; }
+</style>
+</head>
+<body>
+<div id="shell">
+
+  <div id="formPane">
+    <div class="brand">
+      <div class="brand-mark">SV</div>
+      <div class="brand-name">Snapvoice</div>
+    </div>
+    <p class="brand-tag">Fill in your details — the invoice updates live on the right</p>
+
+    <!-- From -->
+    <div class="section-block">
+      <div class="section-head"><h3>From (your business)</h3></div>
+      <div class="logo-upload">
+        <div class="logo-preview" id="logoPreview">Logo</div>
+        <input type="file" id="logoInput" accept="image/*" onchange="handleLogo(event)" style="font-size:12px;">
+      </div>
+      <div class="field"><label>Business / your name</label><input id="fromName" placeholder="Jordan Lee Design" oninput="render()"></div>
+      <div class="field"><label>Address / contact (one per line)</label><textarea id="fromDetail" placeholder="123 Market St, Austin, TX&#10;jordan@example.com" oninput="render()"></textarea></div>
+    </div>
+
+    <!-- Bill To -->
+    <div class="section-block">
+      <div class="section-head"><h3>Bill to (client)</h3></div>
+      <div class="field"><label>Client name</label><input id="toName" placeholder="Acme Corp" oninput="render()"></div>
+      <div class="field"><label>Address / contact (one per line)</label><textarea id="toDetail" placeholder="Attn: Sam Rivera&#10;billing@acme.com" oninput="render()"></textarea></div>
+    </div>
+
+    <!-- Invoice meta -->
+    <div class="section-block">
+      <div class="section-head"><h3>Invoice details</h3></div>
+      <div class="row2">
+        <div class="field"><label>Invoice number</label><input id="invNumber" value="INV-0001" oninput="render()"></div>
+        <div class="field"><label>Currency</label>
+          <select id="currency" onchange="render()">
+            <option value="$">USD ($)</option>
+            <option value="€">EUR (€)</option>
+            <option value="£">GBP (£)</option>
+            <option value="so'm">UZS (soʻm)</option>
+            <option value="₽">RUB (₽)</option>
+            <option value="₹">INR (₹)</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Issue date</label><input id="issueDate" type="date" oninput="render()"></div>
+        <div class="field"><label>Due date</label><input id="dueDate" type="date" oninput="render()"></div>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="invStatus" onchange="render()">
+          <option value="">None</option>
+          <option value="PAID">Paid</option>
+          <option value="DUE">Due</option>
+          <option value="OVERDUE">Overdue</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Line items -->
+    <div class="section-block">
+      <div class="section-head"><h3>Line items</h3></div>
+      <div id="itemsList"></div>
+      <button class="btn add" onclick="addItem()">+ Add item</button>
+    </div>
+
+    <!-- Tax / discount -->
+    <div class="section-block">
+      <div class="section-head"><h3>Tax &amp; discount</h3></div>
+      <div class="row2">
+        <div class="field"><label>Tax (%)</label><input id="taxPct" type="number" value="0" min="0" oninput="render()"></div>
+        <div class="field"><label>Discount (%)</label><input id="discPct" type="number" value="0" min="0" oninput="render()"></div>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="section-block">
+      <div class="section-head"><h3>Notes</h3></div>
+      <div class="field" style="margin-bottom:0;"><textarea id="notes" placeholder="Thank you for your business. Payment due within 14 days." oninput="render()"></textarea></div>
+    </div>
+  </div>
+
+  <div id="previewPane">
+    <div class="preview-toolbar">
+      <span class="hint">Live preview — A4 format</span>
+      <button class="btn full" style="width:auto;" onclick="window.print()">Download as PDF</button>
+    </div>
+    <div id="invoice"></div>
+  </div>
+
+</div>
+
+<script>
+let items = [];
+let idCounter = 1;
+let logoDataUrl = null;
+
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function handleLogo(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    logoDataUrl = ev.target.result;
+    document.getElementById('logoPreview').innerHTML = `<img src="${logoDataUrl}">`;
+    render();
+  };
+  reader.readAsDataURL(file);
+}
+
+function addItem(){
+  items.push({ id: idCounter++, desc:'', qty:1, price:0 });
+  renderItemsForm();
+  render();
+}
+function removeItem(id){ items = items.filter(i=>i.id!==id); renderItemsForm(); render(); }
+function updateItem(id, field, value){
+  const it = items.find(i=>i.id===id);
+  if(it){ it[field] = (field==='desc') ? value : parseFloat(value)||0; render(); }
+}
+function renderItemsForm(){
+  const wrap = document.getElementById('itemsList');
+  wrap.innerHTML = items.map(it=>`
+    <div class="row3 item-row">
+      <div><label>Description</label><input value="${escapeHtml(it.desc)}" placeholder="Website design" oninput="updateItem(${it.id},'desc',this.value)"></div>
+      <div><label>Qty</label><input type="number" value="${it.qty}" min="0" oninput="updateItem(${it.id},'qty',this.value)"></div>
+      <div><label>Price</label><input type="number" value="${it.price}" min="0" oninput="updateItem(${it.id},'price',this.value)"></div>
+      <button class="item-remove" onclick="removeItem(${it.id})">✕</button>
+    </div>
+  `).join('');
+}
+
+function fmtMoney(n, cur){
+  const v = (Math.round(n*100)/100).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+  return cur==="so'm" ? v+' '+cur : cur+v;
+}
+
+function render(){
+  const fromName = document.getElementById('fromName').value.trim();
+  const fromDetail = document.getElementById('fromDetail').value.trim();
+  const toName = document.getElementById('toName').value.trim();
+  const toDetail = document.getElementById('toDetail').value.trim();
+  const invNumber = document.getElementById('invNumber').value.trim();
+  const currency = document.getElementById('currency').value;
+  const issueDate = document.getElementById('issueDate').value;
+  const dueDate = document.getElementById('dueDate').value;
+  const status = document.getElementById('invStatus').value;
+  const taxPct = parseFloat(document.getElementById('taxPct').value)||0;
+  const discPct = parseFloat(document.getElementById('discPct').value)||0;
+  const notes = document.getElementById('notes').value.trim();
+
+  const subtotal = items.reduce((s,it)=>s + (it.qty*it.price), 0);
+  const discAmt = subtotal * (discPct/100);
+  const taxable = subtotal - discAmt;
+  const taxAmt = taxable * (taxPct/100);
+  const total = taxable + taxAmt;
+
+  const fmtDate = (d)=> d ? new Date(d+'T00:00:00').toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}) : '—';
+
+  const itemsHtml = items.length ? items.map(it=>`
+    <tr>
+      <td class="desc">${escapeHtml(it.desc)||'Item'}</td>
+      <td class="num mono">${it.qty}</td>
+      <td class="num mono">${fmtMoney(it.price, currency)}</td>
+      <td class="num mono">${fmtMoney(it.qty*it.price, currency)}</td>
+    </tr>
+  `).join('') : `<tr><td colspan="4" style="color:var(--ink-soft); font-style:italic; padding:14px 0;">Add line items on the left</td></tr>`;
+
+  const statusColor = status==='PAID' ? 'var(--emerald)' : status==='OVERDUE' ? '#B3413A' : 'var(--indigo)';
+
+  document.getElementById('invoice').innerHTML = `
+    ${status ? `<div class="inv-stamp" style="border-color:${statusColor}; color:${statusColor};">${status}</div>` : ''}
+    <div class="inv-top">
+      <div class="inv-brand">
+        ${logoDataUrl ? `<img class="inv-logo" src="${logoDataUrl}">` : ''}
+        <div>
+          <div class="inv-from-name">${escapeHtml(fromName)||'Your Business'}</div>
+          <div class="inv-from-detail">${escapeHtml(fromDetail)}</div>
+        </div>
+      </div>
+      <div class="inv-meta">
+        <div class="inv-label">INVOICE</div>
+        <div class="inv-number">${escapeHtml(invNumber)||'INV-0001'}</div>
+        <div class="inv-dates">
+          Issued: <b>${fmtDate(issueDate)}</b><br>
+          Due: <b>${fmtDate(dueDate)}</b>
+        </div>
+      </div>
+    </div>
+
+    <div class="inv-parties">
+      <div>
+        <div class="inv-party-label">Bill to</div>
+        <div class="inv-party-name">${escapeHtml(toName)||'Client name'}</div>
+        <div class="inv-party-detail">${escapeHtml(toDetail)}</div>
+      </div>
+    </div>
+
+    <table class="inv-items">
+      <thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Price</th><th class="num">Amount</th></tr></thead>
+      <tbody>${itemsHtml}</tbody>
+    </table>
+
+    <div class="inv-totals">
+      <div class="inv-totals-box">
+        <div class="inv-totals-row"><span>Subtotal</span><span class="mono">${fmtMoney(subtotal, currency)}</span></div>
+        ${discPct>0?`<div class="inv-totals-row"><span>Discount (${discPct}%)</span><span class="mono">−${fmtMoney(discAmt, currency)}</span></div>`:''}
+        ${taxPct>0?`<div class="inv-totals-row"><span>Tax (${taxPct}%)</span><span class="mono">${fmtMoney(taxAmt, currency)}</span></div>`:''}
+        <div class="inv-totals-row grand"><span>Total</span><span class="mono">${fmtMoney(total, currency)}</span></div>
+      </div>
+    </div>
+
+    ${notes ? `<div class="inv-notes"><div class="inv-notes-label">Notes</div><div class="inv-notes-text">${escapeHtml(notes)}</div></div>` : ''}
+  `;
+}
+
+/* init with one empty line item and today's date */
+addItem();
+document.getElementById('issueDate').value = new Date().toISOString().slice(0,10);
+render();
+</script>
+</body>
+</html>
